@@ -1,0 +1,20 @@
+{
+  "meta": {
+    "version": "1.0.0",
+    "last_updated": "2026-04-24T00:00:00Z",
+    "description": "Konfigurasi filter pencarian loker"
+  },
+  "search_engine": "google",
+  "email_settings": {
+    "recipients": [],
+    "subject_prefix": "[Loker Alert]",
+    "max_results_per_email": 20,
+    "send_if_empty": false
+  },
+  "schedule": {
+    "cron": "0 8 * * *",
+    "timezone": "Asia/Jakarta",
+    "description": "Setiap hari jam 08:00 WIB"
+  },
+  "searches": []
+}

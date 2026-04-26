@@ -1,0 +1,14 @@
+# Python dependencies for Dork Loker
+
+# Environment variables support
+python-dotenv==1.0.0
+
+# Search APIs
+google-search-results==2.4.2  # SerpAPI
+
+# Supabase with compatible dependencies (older stable version)
+supabase==2.4.5
+postgrest==0.16.8
+gotrue==2.4.2
+httpx==0.24.1
+httpcore==0.17.3

@@ -1,0 +1,32 @@
+# Environment variables
+.env
+
+# Documentation (except README.md in subfolders)
+*.md
+!README.md
+!migrations/README.md
+!public/README.md
+!src/README.md
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv/
+
+# Results
+results.json
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

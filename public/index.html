@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dork Loker - My Searches</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .login-card {
+            max-width: 400px;
+            margin: 100px auto;
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .login-card h1 { text-align: center; color: #1e293b; margin-bottom: 30px; }
+        .header {
+            background: white;
+            border-radius: 16px;
+            padding: 20px 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header-left h1 { color: #1e293b; font-size: 24px; margin-bottom: 5px; }
+        .header-left p { color: #64748b; font-size: 14px; }
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .card h2 { color: #1e293b; font-size: 20px; margin-bottom: 20px; }
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn:hover { background: #5568d3; transform: translateY(-2px); }
+        .btn-secondary { background: #64748b; }
+        .btn-danger { background: #ef4444; }
+        .btn-success { background: #10b981; }
+        .input-group { margin-bottom: 20px; }
+        .input-group label {
+            display: block;
+            color: #1e293b;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .search-list { display: grid; gap: 15px; }
+        .search-item {
+            padding: 20px;
+            background: #f8fafc;
+            border-radius: 12px;
+            border: 2px solid #e2e8f0;
+        }
+        .search-item.inactive { opacity: 0.6; }
+        .search-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .search-title { font-size: 16px; font-weight: 600; color: #1e293b; }
+        .search-details { font-size: 13px; color: #64748b; margin-bottom: 10px; }
+        .search-dork {
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            color: #64748b;
+            background: #fff;
+            padding: 10px;
+            border-radius: 8px;
+            word-break: break-all;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        .badge-active { background: #10b981; color: white; }
+        .badge-inactive { background: #94a3b8; color: white; }
+        .hidden { display: none !important; }
+        .alert {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .alert-error { background: #fee2e2; color: #991b1b; border: 2px solid #ef4444; }
+        .alert-success { background: #dcfce7; color: #166534; border: 2px solid #10b981; }
+        .alert-info { background: #dbeafe; color: #1e40af; border: 2px solid #3b82f6; }
+        .btn-row { display: flex; gap: 10px; }
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            width: 600px;
+            max-width: 95vw;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal h3 { margin-bottom: 20px; color: #1e293b; }
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #64748b;
+        }
+        .empty-state-icon { font-size: 48px; margin-bottom: 10px; }
+        
+        /* Button options */
+        .option-buttons, .keyword-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .option-btn {
+            padding: 10px 16px;
+            border: 2px solid #e2e8f0;
+            background: #f8fafc;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #64748b;
+            font-weight: 500;
+        }
+        .option-btn:hover {
+            border-color: #cbd5e1;
+            background: #fff;
+        }
+        .option-btn.selected {
+            border-color: #667eea;
+            background: #667eea;
+            color: white;
+        }
+        
+        /* Checkbox group */
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            border: 2px solid #e2e8f0;
+            background: #f8fafc;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+        }
+        .checkbox-item:hover {
+            border-color: #cbd5e1;
+            background: #fff;
+        }
+        .checkbox-item.checked {
+            border-color: #ef4444;
+            background: #fef2f2;
+            color: #dc2626;
+        }
+        .checkbox-item input[type="checkbox"] {
+            margin-right: 6px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-card">
+        <h1>🔔 Dork Loker</h1>
+        <div id="loginError" class="alert alert-error hidden"></div>
+        <div class="input-group">
+            <label>Email</label>
+            <input type="email" id="loginEmail" placeholder="your@email.com">
+        </div>
+        <button class="btn" onclick="handleLogin()" style="width: 100%;">Login</button>
+    </div>
+
+    <!-- User Dashboard -->
+    <div id="userDashboard" class="container hidden">
+        <div class="header">
+            <div class="header-left">
+                <h1>🔔 My Job Searches</h1>
+                <p id="userEmail"></p>
+            </div>
+            <button class="btn btn-secondary" onclick="handleLogout()">Logout</button>
+        </div>
+
+        <div class="alert alert-info">
+            💡 <strong>Cara pakai:</strong> Buat custom search dengan keyword dan filter yang kamu mau. Setiap hari kamu akan dapat email notifikasi untuk lowongan baru yang match!
+        </div>
+
+        <!-- Admin Section (only visible for admins) -->
+        <div id="adminSection" class="hidden">
+            <div class="card">
+                <h2>👥 Manage Users (Admin Only)</h2>
+                <div id="userList" style="display: grid; gap: 10px; margin-bottom: 15px;"></div>
+                <button class="btn" onclick="openAddUserModal()">+ Add User</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0;">📋 My Search</h2>
+                <button id="createSearchBtn" class="btn" onclick="openSearchModal()">+ Create Search</button>
+            </div>
+            <div id="searchList"></div>
+        </div>
+    </div>
+
+    <!-- Search Modal -->
+    <div id="searchModal" class="modal-overlay">
+        <div class="modal">
+            <h3 id="modalTitle">Create New Search</h3>
+            
+            <div class="input-group">
+                <label>Label / Nama Search (custom name)</label>
+                <input type="text" id="searchLabel" placeholder="e.g. Remote Frontend Developer Jakarta">
+                <small style="color: #64748b; font-size: 12px; margin-top: 4px; display: block;">
+                    Ini aja yang text box, biar bisa custom nama search
+                </small>
+            </div>
+
+            <div class="input-group">
+                <label>Keyword (pilih salah satu)</label>
+                <div class="keyword-buttons" id="keywordButtons"></div>
+            </div>
+
+            <div class="input-group">
+                <label>Location Type (pilih salah satu)</label>
+                <div class="option-buttons" id="lokasiButtons"></div>
+            </div>
+
+            <div class="input-group">
+                <label>Employment Type (pilih salah satu)</label>
+                <div class="option-buttons" id="waktuButtons"></div>
+            </div>
+
+            <div class="input-group">
+                <label>City (pilih salah satu)</label>
+                <div class="option-buttons" id="kotaButtons"></div>
+            </div>
+
+            <div class="input-group">
+                <label>Exclude Keywords (pilih yang mau di-exclude)</label>
+                <div class="checkbox-group" id="excludeCheckboxes"></div>
+            </div>
+
+            <div class="input-group">
+                <label>Status</label>
+                <div class="option-buttons" id="statusButtons"></div>
+            </div>
+
+            <div class="btn-row" style="margin-top: 20px;">
+                <button class="btn" onclick="saveSearch()">Save</button>
+                <button class="btn btn-secondary" onclick="closeSearchModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add User Modal (Admin Only) -->
+    <div id="addUserModal" class="modal-overlay">
+        <div class="modal">
+            <h3>Add New User</h3>
+            <div class="input-group">
+                <label>Email Address</label>
+                <input type="email" id="newUserEmail" placeholder="user@example.com">
+            </div>
+            <div class="btn-row">
+                <button class="btn" onclick="saveNewUser()">Add User</button>
+                <button class="btn btn-secondary" onclick="closeAddUserModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script>
+        // Initialize Supabase
+        const sb = window.supabase.createClient(
+            window.SUPABASE_CONFIG.url,
+            window.SUPABASE_CONFIG.anonKey
+        );
+        
+        let currentUser = null;
+        let editingSearchId = null;
+
+        // Login
+        async function handleLogin() {
+            const email = document.getElementById('loginEmail').value.trim();
+            if (!email) {
+                showError('Please enter your email');
+                return;
+            }
+
+            try {
+                const { data, error } = await sb
+                    .from('users')
+                    .select('*')
+                    .eq('email', email)
+                    .eq('active', true)
+                    .single();
+
+                if (error || !data) {
+                    showError('Access denied. Email not registered.');
+                    return;
+                }
+
+                currentUser = data;
+                localStorage.setItem('dorkLokerUser', JSON.stringify(data));
+                
+                // Show dashboard (both admin and user use same page)
+                document.getElementById('loginScreen').classList.add('hidden');
+                loadUserDashboard();
+            } catch (err) {
+                showError('Login failed: ' + err.message);
+            }
+        }
+
+        function handleLogout() {
+            currentUser = null;
+            localStorage.removeItem('dorkLokerUser');
+            document.getElementById('userDashboard').classList.add('hidden');
+            document.getElementById('loginScreen').classList.remove('hidden');
+            document.getElementById('loginEmail').value = '';
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('loginError');
+            errorDiv.textContent = message;
+            errorDiv.classList.remove('hidden');
+            setTimeout(() => errorDiv.classList.add('hidden'), 5000);
+        }
+
+        // Dashboard
+        async function loadUserDashboard() {
+            document.getElementById('userDashboard').classList.remove('hidden');
+            document.getElementById('userEmail').textContent = currentUser.email;
+            
+            // Show admin section if user is admin
+            if (currentUser.is_admin) {
+                document.getElementById('adminSection').classList.remove('hidden');
+                await loadUsers();
+            }
+            
+            await loadUserSearches();
+        }
+
+        async function loadUserSearches() {
+            const { data, error } = await sb
+                .from('searches')
+                .select('*')
+                .eq('user_id', currentUser.id)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('Error loading searches:', error);
+                return;
+            }
+
+            const searchList = document.getElementById('searchList');
+            const createBtn = document.getElementById('createSearchBtn');
+            
+            // Hide/show create button based on whether user has a search
+            if (data && data.length > 0) {
+                createBtn.classList.add('hidden');
+            } else {
+                createBtn.classList.remove('hidden');
+            }
+            
+            if (!data || data.length === 0) {
+                searchList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🔍</div>
+                        <p>Belum ada search. Klik "Create Search" untuk mulai!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            searchList.innerHTML = '';
+            data.forEach(search => {
+                const div = document.createElement('div');
+                div.className = `search-item ${search.active ? '' : 'inactive'}`;
+                div.innerHTML = `
+                    <div class="search-header">
+                        <div>
+                            <span class="search-title">${search.label}</span>
+                            <span class="badge ${search.active ? 'badge-active' : 'badge-inactive'}">
+                                ${search.active ? 'Active' : 'Inactive'}
+                            </span>
+                        </div>
+                        <div class="btn-row">
+                            <button class="btn" style="padding: 8px 16px; font-size: 13px;" onclick="editSearch('${search.id}')">Edit</button>
+                            <button class="btn btn-danger" style="padding: 8px 16px; font-size: 13px;" onclick="deleteSearch('${search.id}')">Delete</button>
+                        </div>
+                    </div>
+                    <div class="search-details">
+                        ${search.keyword} • ${search.lokasi_kerja || 'Any location'} • ${search.waktu_kerja || 'Any type'} • ${search.kota || 'All cities'}
+                    </div>
+                    <div class="search-dork">${buildDork(search)}</div>
+                `;
+                searchList.appendChild(div);
+            });
+        }
+
+        // Search CRUD
+        function openSearchModal() {
+            editingSearchId = null;
+            document.getElementById('modalTitle').textContent = 'Create New Search';
+            document.getElementById('searchLabel').value = '';
+            
+            // Initialize button groups
+            initKeywordButtons();
+            initLokasiButtons();
+            initWaktuButtons();
+            initKotaButtons();
+            initExcludeCheckboxes();
+            initStatusButtons();
+            
+            document.getElementById('searchModal').classList.add('open');
+        }
+
+        function initKeywordButtons() {
+            const keywords = [
+                { value: 'software engineer', label: 'Software Engineer' },
+                { value: 'frontend developer', label: 'Frontend Developer' },
+                { value: 'backend developer', label: 'Backend Developer' },
+                { value: 'fullstack developer', label: 'Fullstack Developer' },
+                { value: 'mobile developer', label: 'Mobile Developer' },
+                { value: 'android developer', label: 'Android Developer' },
+                { value: 'iOS developer', label: 'iOS Developer' },
+                { value: 'react developer', label: 'React Developer' },
+                { value: 'vue developer', label: 'Vue Developer' },
+                { value: 'angular developer', label: 'Angular Developer' },
+                { value: 'node js developer', label: 'Node.js Developer' },
+                { value: 'python developer', label: 'Python Developer' },
+                { value: 'java developer', label: 'Java Developer' },
+                { value: 'golang developer', label: 'Golang Developer' },
+                { value: 'devops engineer', label: 'DevOps Engineer' },
+                { value: 'cloud engineer', label: 'Cloud Engineer' },
+                { value: 'UI UX designer', label: 'UI/UX Designer' },
+                { value: 'graphic designer', label: 'Graphic Designer' },
+                { value: 'product designer', label: 'Product Designer' },
+                { value: 'product manager', label: 'Product Manager' },
+                { value: 'project manager', label: 'Project Manager' },
+                { value: 'scrum master', label: 'Scrum Master' },
+                { value: 'data analyst', label: 'Data Analyst' },
+                { value: 'data scientist', label: 'Data Scientist' },
+                { value: 'data engineer', label: 'Data Engineer' },
+                { value: 'business analyst', label: 'Business Analyst' },
+                { value: 'QA engineer', label: 'QA Engineer' },
+                { value: 'QA tester', label: 'QA Tester' },
+                { value: 'digital marketing', label: 'Digital Marketing' },
+                { value: 'content writer', label: 'Content Writer' },
+                { value: 'copywriter', label: 'Copywriter' },
+                { value: 'social media specialist', label: 'Social Media Specialist' },
+                { value: 'SEO specialist', label: 'SEO Specialist' },
+                { value: 'customer service', label: 'Customer Service' },
+                { value: 'sales executive', label: 'Sales Executive' },
+                { value: 'account manager', label: 'Account Manager' }
+            ];
+            
+            const container = document.getElementById('keywordButtons');
+            container.innerHTML = '';
+            
+            keywords.forEach(kw => {
+                const btn = document.createElement('div');
+                btn.className = 'option-btn';
+                btn.textContent = kw.label;
+                btn.dataset.value = kw.value;
+                btn.onclick = function() {
+                    // Toggle selection
+                    const allBtns = container.querySelectorAll('.option-btn');
+                    allBtns.forEach(b => b.classList.remove('selected'));
+                    this.classList.add('selected');
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        function initLokasiButtons() {
+            const options = [
+                { value: '', label: 'All' },
+                { value: 'remote', label: 'Remote / WFH' },
+                { value: 'hybrid', label: 'Hybrid' },
+                { value: 'on-site', label: 'On-site' }
+            ];
+            createButtonGroup('lokasiButtons', options, '');
+        }
+
+        function initWaktuButtons() {
+            const options = [
+                { value: '', label: 'All' },
+                { value: 'full-time', label: 'Full-time' },
+                { value: 'part-time', label: 'Part-time' },
+                { value: 'freelance', label: 'Freelance' },
+                { value: 'internship', label: 'Internship' },
+                { value: 'kontrak', label: 'Kontrak' }
+            ];
+            createButtonGroup('waktuButtons', options, '');
+        }
+
+        function initKotaButtons() {
+            const cities = [
+                { value: '', label: 'All Cities' },
+                { value: 'Indonesia', label: 'Indonesia' },
+                { value: 'Jakarta', label: 'Jakarta' },
+                { value: 'Bandung', label: 'Bandung' },
+                { value: 'Surabaya', label: 'Surabaya' },
+                { value: 'Yogyakarta', label: 'Yogyakarta' },
+                { value: 'Semarang', label: 'Semarang' },
+                { value: 'Medan', label: 'Medan' },
+                { value: 'Palembang', label: 'Palembang' },
+                { value: 'Makassar', label: 'Makassar' },
+                { value: 'Tangerang', label: 'Tangerang' },
+                { value: 'Bekasi', label: 'Bekasi' },
+                { value: 'Depok', label: 'Depok' },
+                { value: 'Bogor', label: 'Bogor' },
+                { value: 'Bali', label: 'Bali' },
+                { value: 'Denpasar', label: 'Denpasar' },
+                { value: 'Batam', label: 'Batam' },
+                { value: 'Balikpapan', label: 'Balikpapan' },
+                { value: 'Manado', label: 'Manado' }
+            ];
+            createButtonGroup('kotaButtons', cities, '');
+        }
+
+        function initExcludeCheckboxes() {
+            const excludeOptions = [
+                'senior', 'lead', 'manager', 'principal', 'head', 'director', 'chief', 'VP', 'C-level'
+            ];
+            
+            const container = document.getElementById('excludeCheckboxes');
+            container.innerHTML = '';
+            
+            excludeOptions.forEach(keyword => {
+                const label = document.createElement('label');
+                label.className = 'checkbox-item';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.value = keyword;
+                checkbox.onchange = function() {
+                    label.classList.toggle('checked', this.checked);
+                };
+                
+                const text = document.createElement('span');
+                text.textContent = keyword.charAt(0).toUpperCase() + keyword.slice(1);
+                
+                label.appendChild(checkbox);
+                label.appendChild(text);
+                label.onclick = function(e) {
+                    if (e.target !== checkbox) {
+                        checkbox.checked = !checkbox.checked;
+                        checkbox.onchange();
+                    }
+                };
+                
+                container.appendChild(label);
+            });
+        }
+
+        function initStatusButtons() {
+            const options = [
+                { value: 'true', label: 'Active' },
+                { value: 'false', label: 'Inactive' }
+            ];
+            createButtonGroup('statusButtons', options, 'true');
+        }
+
+        function createButtonGroup(containerId, options, defaultValue) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            
+            options.forEach(opt => {
+                const btn = document.createElement('div');
+                btn.className = 'option-btn';
+                if (opt.value === defaultValue) {
+                    btn.classList.add('selected');
+                }
+                btn.textContent = opt.label;
+                btn.dataset.value = opt.value;
+                btn.onclick = function() {
+                    // Single selection
+                    const allBtns = container.querySelectorAll('.option-btn');
+                    allBtns.forEach(b => b.classList.remove('selected'));
+                    this.classList.add('selected');
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        function getSelectedButton(containerId) {
+            const selected = document.querySelector(`#${containerId} .option-btn.selected`);
+            return selected ? selected.dataset.value : '';
+        }
+
+        function setSelectedButton(containerId, value) {
+            const container = document.getElementById(containerId);
+            const allBtns = container.querySelectorAll('.option-btn');
+            allBtns.forEach(btn => {
+                btn.classList.toggle('selected', btn.dataset.value === value);
+            });
+        }
+
+        function getSelectedKeyword() {
+            const selected = document.querySelector('#keywordButtons .option-btn.selected');
+            return selected ? selected.dataset.value : '';
+        }
+
+        function getSelectedKota() {
+            const selected = document.querySelector('#kotaButtons .option-btn.selected');
+            return selected ? selected.dataset.value : '';
+        }
+
+        function getExcludeKeywords() {
+            const checkboxes = document.querySelectorAll('#excludeCheckboxes input[type="checkbox"]:checked');
+            return Array.from(checkboxes).map(cb => cb.value);
+        }
+
+        async function editSearch(searchId) {
+            const { data, error } = await sb
+                .from('searches')
+                .select('*')
+                .eq('id', searchId)
+                .single();
+
+            if (error || !data) {
+                alert('Error loading search');
+                return;
+            }
+
+            editingSearchId = searchId;
+            document.getElementById('modalTitle').textContent = 'Edit Search';
+            document.getElementById('searchLabel').value = data.label;
+            
+            // Initialize buttons
+            initKeywordButtons();
+            initLokasiButtons();
+            initWaktuButtons();
+            initKotaButtons();
+            initExcludeCheckboxes();
+            initStatusButtons();
+            
+            // Set keyword
+            const keywordBtn = document.querySelector(`#keywordButtons .option-btn[data-value="${data.keyword}"]`);
+            if (keywordBtn) {
+                keywordBtn.classList.add('selected');
+            } else {
+                document.getElementById('searchKeywordCustom').value = data.keyword;
+            }
+            
+            // Set other fields
+            setSelectedButton('lokasiButtons', data.lokasi_kerja || '');
+            setSelectedButton('waktuButtons', data.waktu_kerja || '');
+            
+            // Set kota
+            const kotaBtn = document.querySelector(`#kotaButtons .option-btn[data-value="${data.kota || ''}"]`);
+            if (kotaBtn) {
+                kotaBtn.classList.add('selected');
+            } else if (data.kota) {
+                document.getElementById('searchKotaCustom').value = data.kota;
+            }
+            
+            // Set exclude checkboxes
+            if (data.exclude_keywords && data.exclude_keywords.length > 0) {
+                data.exclude_keywords.forEach(keyword => {
+                    const checkbox = document.querySelector(`#excludeCheckboxes input[value="${keyword}"]`);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                        checkbox.parentElement.classList.add('checked');
+                    }
+                });
+            }
+            
+            setSelectedButton('statusButtons', data.active.toString());
+            document.getElementById('searchModal').classList.add('open');
+        }
+
+        async function saveSearch() {
+            const label = document.getElementById('searchLabel').value.trim();
+            const keyword = getSelectedKeyword();
+
+            if (!label) {
+                alert('Label is required');
+                return;
+            }
+
+            if (!keyword) {
+                alert('Please select a keyword');
+                return;
+            }
+
+            const searchData = {
+                label: label,
+                keyword: keyword,
+                lokasi_kerja: getSelectedButton('lokasiButtons') || null,
+                waktu_kerja: getSelectedButton('waktuButtons') || null,
+                kota: getSelectedKota() || null,
+                exclude_keywords: getExcludeKeywords(),
+                active: getSelectedButton('statusButtons') === 'true'
+            };
+
+            if (editingSearchId) {
+                // Update
+                const { error } = await sb
+                    .from('searches')
+                    .update(searchData)
+                    .eq('id', editingSearchId);
+
+                if (error) {
+                    alert('Error updating search: ' + error.message);
+                    return;
+                }
+            } else {
+                // Check if user already has a search (max 1 per user)
+                const { data: existingSearches } = await sb
+                    .from('searches')
+                    .select('id')
+                    .eq('user_id', currentUser.id);
+                
+                if (existingSearches && existingSearches.length > 0) {
+                    alert('You already have a search. Please edit or delete your existing search first.');
+                    return;
+                }
+                
+                // Create
+                searchData.user_id = currentUser.id;
+                const { error } = await sb
+                    .from('searches')
+                    .insert(searchData);
+
+                if (error) {
+                    alert('Error creating search: ' + error.message);
+                    return;
+                }
+            }
+
+            closeSearchModal();
+            await loadUserSearches();
+        }
+
+        async function deleteSearch(searchId) {
+            if (!confirm('Delete this search? This will stop all email notifications.')) return;
+
+            const { error } = await sb
+                .from('searches')
+                .delete()
+                .eq('id', searchId);
+
+            if (error) {
+                alert('Error deleting search: ' + error.message);
+                return;
+            }
+
+            await loadUserSearches();
+        }
+
+        function closeSearchModal() {
+            document.getElementById('searchModal').classList.remove('open');
+        }
+
+        // Dork builder
+        function buildDork(search) {
+            let parts = [];
+            if (search.keyword) parts.push('"' + search.keyword + '"');
+            if (search.lokasi_kerja) parts.push('"' + search.lokasi_kerja + '"');
+            if (search.waktu_kerja) {
+                const map = {
+                    internship: '"internship" OR "magang"',
+                    freelance: '"freelance"',
+                    'full-time': '"full-time" OR "fulltime"',
+                    'part-time': '"part-time" OR "paruh waktu"',
+                    kontrak: '"kontrak" OR "PKWT"'
+                };
+                parts.push(map[search.waktu_kerja] || '"' + search.waktu_kerja + '"');
+            }
+            if (search.kota) parts.push(search.kota);
+            if (search.exclude_keywords && search.exclude_keywords.length) {
+                search.exclude_keywords.forEach(k => parts.push('-"' + k + '"'));
+            }
+            parts.push(new Date().getFullYear().toString());
+            return parts.join(' ');
+        }
+
+        // ========================================
+        // ADMIN FUNCTIONS
+        // ========================================
+
+        // User Management
+        async function loadUsers() {
+            const { data, error } = await sb.from('users').select('*').order('created_at', { ascending: false });
+            if (error) { console.error('Error loading users:', error); return; }
+
+            const userList = document.getElementById('userList');
+            userList.innerHTML = '';
+
+            data.forEach(user => {
+                const div = document.createElement('div');
+                div.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f8fafc; border-radius: 8px; border: 2px solid #e2e8f0;';
+                if (user.is_admin) div.style.background = '#dbeafe';
+                
+                div.innerHTML = `
+                    <div>
+                        <strong>${user.email}</strong>
+                        ${user.is_admin ? '<span class="badge" style="background: #3b82f6; color: white; margin-left: 8px;">Admin</span>' : ''}
+                    </div>
+                    ${!user.is_admin ? `<button class="btn btn-danger" style="padding: 6px 12px; font-size: 12px;" onclick="deleteUser('${user.id}')">Remove</button>` : ''}
+                `;
+                userList.appendChild(div);
+            });
+        }
+
+        function openAddUserModal() {
+            document.getElementById('newUserEmail').value = '';
+            document.getElementById('addUserModal').classList.add('open');
+        }
+
+        function closeAddUserModal() {
+            document.getElementById('addUserModal').classList.remove('open');
+        }
+
+        async function saveNewUser() {
+            const email = document.getElementById('newUserEmail').value.trim();
+            if (!email || !email.includes('@')) {
+                alert('Please enter a valid email address');
+                return;
+            }
+            
+            const { error } = await sb.from('users').insert({ email: email, is_admin: false });
+            if (error) { 
+                alert('Error adding user: ' + error.message); 
+                return; 
+            }
+            
+            closeAddUserModal();
+            await loadUsers();
+        }
+
+        async function deleteUser(userId) {
+            if (!confirm('Remove this user? This will also delete their search and stop their notifications.')) return;
+            const { error } = await sb.from('users').delete().eq('id', userId);
+            if (error) { alert('Error deleting user: ' + error.message); return; }
+            await loadUsers();
+        }
+
+        // Auto-login if saved
+        window.onload = function() {
+            const saved = localStorage.getItem('dorkLokerUser');
+            if (saved) {
+                currentUser = JSON.parse(saved);
+                document.getElementById('loginScreen').classList.add('hidden');
+                loadUserDashboard();
+            }
+        };
+    </script>
+</body>
+</html>
